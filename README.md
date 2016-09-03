@@ -11,7 +11,7 @@ information straight from the `git-rebase` editor, such as the author date,
 author name and commit message. This makes it trivial to edit a whole range
 of commits, shift them through time or alter ownership.
 
-<div style="clear: both"></div>
+<br clear="left"/>
 
 ## Usage
 
