@@ -7,8 +7,9 @@ before_install:
     if [[ "$TRAVIS_OS_NAME" == osx ]]; then
       brew install bats
     else
-    sudo apt-get update -q
-      sudo apt-get install -y bats
+      sudo add-apt-repository ppa:duggan/bats --yes
+      sudo apt-get update -qq
+      sudo apt-get install -qq -y bats
     fi
 
 script:
