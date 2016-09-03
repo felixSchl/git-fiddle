@@ -1,17 +1,55 @@
 #!/bin/bash
 
-{
-rm -rf /tmp/foo
-mkdir -p /tmp/foo
-cd /tmp/foo
-git init
-touch A && git add -A && git commit -m A
-touch B && git add -A && git commit -m B
-touch C && git add -A && git commit -m C
-git status
-} &> /dev/null
+SCRIPT=git-fiddle
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 original_git_sequence_editor="$GIT_SEQUENCE_EDITOR"
-GIT_SEQUENCE_EDITOR=/Users/felix/projects/git-fiddle/editor \
-FIDDLER_SEQUENCE_EDITOR="$original_git_sequence_editor" \
-    git rebase -i -p HEAD~2
+
+function help () {
+	cat <<-'EOF'
+		git-fiddle
+
+		Edit commit meta information during an *interactive* rebase.
+
+		`git-fiddle(1)' is a lightweight wrapper around `git-rebase(1)' that
+		annotates each commit with it's *author* date, the author name, as well
+		as the commit message. Changes to any of these will then be applied
+		using a 'exec' script during the git-rebase sequence.
+
+		Usage:
+		  $SCRIPT [--[no-]messages] [args...]
+
+		Options:
+		  --no-messages Do not edit commit messages. Useful for quick edits to
+		                author or date.
+		  [args...] These arguments are passed verbatim to git-rebase.
+	EOF
+}
+
+# strip args to git-fiddle from argv.
+GIT_FIDDLE_NOMSG=0
+function strip_args () {
+	for arg in "$@"; do
+		case arg in
+			--no-messages) GIT_FIDDLE_NOMSG=1; ;;
+			*)             echo -n "$arg" ; ;;
+		esac
+	done
+}
+
+git_rebase_args="$(strip_args "$@")"
+GIT_SEQUENCE_EDITOR="${SCRIPT_DIR}/editor" \
+GIT_FIDDLE_NOMSG="$GIT_FIDDLE_NOMSG" \
+GIT_FIDDLE_SEQUENCE_EDITOR="$original_git_sequence_editor" \
+	git rebase "${git_rebase_args[@]}"
+
+# {
+# rm -rf /tmp/foo
+# mkdir -p /tmp/foo
+# cd /tmp/foo
+# git init
+# touch A && git add -A && git commit -m A
+# touch B && git add -A && git commit -m B
+# touch C && git add -A && git commit -m C
+# git status
+# } &> /dev/null

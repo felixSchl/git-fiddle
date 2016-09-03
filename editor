@@ -1,105 +1,129 @@
 #!/bin/bash
+#
+# Enhace the git-rebase(1) todo file with additional information about each
+# commit, such as the author date, the author name and e-mail, as well as the
+# commit message. The user then has the chance to edit any of this information
+# when 'GIT_SEQUENCE_EDITOR' is invoked on the decorated git-rebase(1) todo
+# file. Upon successful execution of 'GIT_SEQUENCE_EDITOR', parse the user's
+# changes and prepare a 'git commit --amend' 'exec' step to be called after each
+# 'pick'ed commit.
 
-fiddler_todo=/tmp/git-fiddler.todo
+fiddle_todo="$1".fiddle
 
 die() { echo "$@" 1>&2 ; exit 1; }
 
-# Get a little more information about each mentioned commit.
-# we allow the user to edit the author date, the author, and the short message
-while read -r line; do
-	if [ -z "$line" ] || [[ $line =~ ^[[:space:]]?# ]]; then
-		printf "%s\n" "$line"
-	else
-		echo "$line" | {
-			read -r action sha rest
-				printf "%s %s\n%s\n" "$action" "$sha" \
-					"$(git --no-pager show -s "$sha" | tail -n+2)"
-		}
-	fi
-done < "$1" > "$fiddler_todo"
+fiddle_MESSAGE="$(cat <<-EOF
+	#
+	# WARNING: any changes to the author, date and message are only retained
+	#          for 'picked' commits.
+EOF
+)"
 
-fiddler_sequence_editor () {
-	if [ -z "$FIDDLER_SEQUENCE_EDITOR" ]; then
-		FIDDLER_SEQUENCE_EDITOR="$(git config sequence.editor)"
-		if [ -z "$FIDDLER_SEQUENCE_EDITOR" ]; then
-			FIDDLER_SEQUENCE_EDITOR="$(git var GIT_EDITOR)" || return $?
+# process the '--no-msg' option
+GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>\n%s'
+if [ -z "$GIT_FIDDLE_NOMSG" ] || [ -eq "$GIT_FIDDLE_NOMSG" 0 ]; then
+	GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>'
+fi
+
+function prepare () {
+	while read -r line; do
+		if [ -z "$line" ] || [[ $line =~ ^[[:space:]]?# ]]; then
+			printf "%s\n" "$line"
+		else
+			echo "$line" | {
+				read -r action sha rest
+				printf "%s %s %s\n\n" "$action" "$sha" \
+					"$(git --no-pager show -s "$sha" "$GIT_PRETTY_FORMAT")"
+			}
 		fi
-	fi
-	eval "$FIDDLER_SEQUENCE_EDITOR" '"$@"'
+	done < "$1" > "$2"
+	echo "$fiddle_MESSAGE" >> "$2"
 }
 
-# fiddler_sequence_editor "$fiddler_todo" || exit 1
+function fiddle_sequence_editor () {
+	if [ -z "$GIT_FIDDLE_SEQUENCE_EDITOR" ]; then
+		GIT_FIDDLE_SEQUENCE_EDITOR="$(git config sequence.editor)"
+		if [ -z "$GIT_FIDDLE_SEQUENCE_EDITOR" ]; then
+			GIT_FIDDLE_SEQUENCE_EDITOR="$(git var GIT_EDITOR)" || return $?
+		fi
+	fi
+	eval "$GIT_FIDDLE_SEQUENCE_EDITOR" '"$@"'
+}
 
-git stripspace --strip-comments < "$fiddler_todo" | awk '
-	function get_new_action(action, sha) {
-		if (match(action, "^pick|p|drop|d|reword|r|edit|e|squash|s|fixup|f$") &&
-			match(sha, "^[a-z0-9]{6,}$")) {
-			if      (action == "p") { return "pick";   }
-			else if (action == "d") { return "drop";   }
-			else if (action == "r") { return "reword"; }
-			else if (action == "e") { return "edit";   }
-			else if (action == "s") { return "squash"; }
-			else if (action == "f") { return "fixup";  }
-			else                    { return action;   }
-		} else { return ""; }
-	}
+function emit () {
+	local -r author="$1"
+	local -r date="$2"
+	local -r message="$3"
 
-	function emit(author, date, message) {
-		print "EMIT>" author " " date " " message
-	}
+	local c="exec"
+	[ ! -z "$date" ] && c="$c GIT_AUTHOR_DATE='$date'"
+	c="$c git commit --amend --no-edit"
+	[ ! -z "$date" ] && c="$c --date='$date'"
+	[ ! -z "$author" ] && c="$c --author='$author'"
+	[ ! -z "$message" ] && c="$c --message='$message'"
+	echo "$c"
+}
 
-	BEGIN {
-		state="" # <empty>|scanning_fields|scanning_message
-		mod_author=""
-		mod_date=""
-		mod_message=""
-	}
+function apply () {
+	local state=
+	local mod_date=
+	local mod_author=
+	local mod_message=
+	local scanning=0
+	while read -r line; do
+		read -r action sha rest < <(echo "$line")
+		if [[ "$action" =~ ^pick|p|drop|d|reword|r|edit|e|squash|s|fixup|f$ ]]; then
+			if [[ "$sha" =~ ^[0-9a-z]{6,}$ ]]; then
+				# flush the current scan
+				if [ $scanning -eq 1 ]; then
+					emit "$mod_author" "$mod_date" "$mod_message"
+				fi
 
-	{
-		new_action=""
-		if (NF == 2) {
-			new_action=get_new_action($1, $2);
-		}
+				# retain the action
+				echo "$action $sha"
+				
+				# reset state
+				mod_date=
+				mod_author=
+				mod_message=
+				scanning=0
 
-		if (new_action=="") {
-			if (state == "scanning_fields") {
-				if (mod_author == "" && $1 == "Author:") {
-					mod_author = $0
-					sub("^Author:\s*", "", mod_author)
-				} else if (mod_date == "" && $1 == "Date:") {
-					mod_date = $0
-					sub("^Date:\s*", "", mod_date)
-				} else {
-					mod_message = $0
-					state = "scanning_message"
-				}
-			} else if (state == "scanning_message") {
-				mod_message = mod_message $0
-			} else {
-				# ignore ...
-			}
-		} else {
-			if (state != "") {
-				emit(mod_author, mod_date, mod_message)
-			}
+				# begin a fresh scan for 'pick' actions
+				if [[ "$action" == pick ]]; then
+					m=0
+					scanning=1
+					for col in $rest; do
+						if [[ "$col" == by: ]]; then m=1; else
+							case $m in
+								0) mod_date="$mod_date$(
+										[ ! -z "$mod_date" ] && echo ' '
+									)$col"; ;;
+								1) mod_author="$mod_author$(
+										[ ! -z "$mod_author" ] && echo ' '
+									)$col"; ;;
+							esac
+						fi
+					done
+					continue
+				fi
+			fi
+		fi
 
-			# reset state
-			mod_author = ""
-			mod_date = ""
-			mod_message = ""
+		if [ $scanning -eq 1 ]; then
+			mod_message="$mod_message$(
+				[ ! -z "$mod_message" ] && echo $'\n'
+			)$line"
+		fi
+	done < <(git stripspace --strip-comments < "$1")
 
-			if (new_action=="pick") {
-				state="scanning_fields"
-				print $0
-			} else {
-				state = ""
-			}
-		}
-	}
+	# flush the current scan
+	if [ $scanning -eq 1 ]; then
+		emit "$mod_author" "$mod_date" "$mod_message"
+	fi
+}
 
-	END {
-		if (state != "") {
-			emit(mod_author, mod_date, mod_message)
-		}
-	}
-'
+# kick off
+prepare "$1" "$fiddle_todo" && \
+	fiddle_sequence_editor "$fiddle_todo" && \
+		apply "$fiddle_todo" > "$1" && \
+			rm -f "$fiddle_todo"
