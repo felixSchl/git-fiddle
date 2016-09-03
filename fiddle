@@ -36,22 +36,20 @@ case "${1---help}" in
 esac
 
 # strip args to `git-fiddle' from argv, so git-rebase won't reject them.
-GIT_FIDDLE_NOMSG=0
-function strip_args () {
-	for arg in "$@"; do
-		case "$arg" in
-			--no-messages) GIT_FIDDLE_NOMSG=1; ;;
-			*)             echo -n "$arg"; ;;
-		esac
-	done
-}
-
-git_rebase_args="$(strip_args "$@")"
+git_fiddle_nomsg=false
+declare -a git_rebase_args
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--no-messages) git_fiddle_nomsg=true; ;;
+		*) git_rebase_args+=("$1"); ;;
+	esac
+	shift
+done
 
 # invoke `git-rebase' using a custom editor, effectively wrapping the user's
 # actual editor choice, which will be invoked from the `git-fiddle` editor
 # itself.
 GIT_SEQUENCE_EDITOR="${SCRIPT_DIR}/editor" \
-	GIT_FIDDLE_NOMSG="$GIT_FIDDLE_NOMSG" \
+	GIT_FIDDLE_NOMSG="$git_fiddle_nomsg" \
 	GIT_FIDDLE_SEQUENCE_EDITOR="$ORIGINAL_GIT_SEQUENCE_EDITOR" \
 	git rebase -i "${git_rebase_args[@]}"

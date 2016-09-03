@@ -35,6 +35,6 @@ function mk_script () {
   echo "$tmp_editor"
 }
 
-function git_fiddle () { "$SCRIPT_DIR"/fiddle "$*"; }
+function git_fiddle () { "$SCRIPT_DIR"/fiddle "$@"; }
 
 export git_fiddle

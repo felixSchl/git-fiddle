@@ -17,9 +17,9 @@ FIDDLE_MESSAGE="$(cat <<-'EOF'
 EOF
 )"
 
-# process the '--no-msg' option
+# process the '--no-messages' option
 GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>\n%s'
-if [[ "$GIT_FIDDLE_NOMSG" == 1 ]]; then
+if [ "${GIT_FIDDLE_NOMSG-false}" = true ]; then
 	GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>'
 fi
 
