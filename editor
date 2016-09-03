@@ -10,9 +10,7 @@
 
 fiddle_todo="$1".fiddle
 
-die() { echo "$@" 1>&2 ; exit 1; }
-
-fiddle_MESSAGE="$(cat <<-EOF
+FIDDLE_MESSAGE="$(cat <<-'EOF'
 	#
 	# WARNING: any changes to the author, date and message are only retained
 	#          for 'picked' commits.
@@ -21,7 +19,7 @@ EOF
 
 # process the '--no-msg' option
 GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>\n%s'
-if [ -z "$GIT_FIDDLE_NOMSG" ] || [ -eq "$GIT_FIDDLE_NOMSG" 0 ]; then
+if [[ "$GIT_FIDDLE_NOMSG" == 1 ]]; then
 	GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>'
 fi
 
@@ -37,7 +35,7 @@ function prepare () {
 			}
 		fi
 	done < "$1" > "$2"
-	echo "$fiddle_MESSAGE" >> "$2"
+	echo "$FIDDLE_MESSAGE" >> "$2"
 }
 
 function fiddle_sequence_editor () {
@@ -65,7 +63,6 @@ function emit () {
 }
 
 function apply () {
-	local state=
 	local mod_date=
 	local mod_author=
 	local mod_message=
@@ -74,6 +71,7 @@ function apply () {
 		read -r action sha rest < <(echo "$line")
 		if [[ "$action" =~ ^pick|p|drop|d|reword|r|edit|e|squash|s|fixup|f$ ]]; then
 			if [[ "$sha" =~ ^[0-9a-z]{6,}$ ]]; then
+
 				# flush the current scan
 				if [ $scanning -eq 1 ]; then
 					emit "$mod_author" "$mod_date" "$mod_message"
@@ -125,5 +123,5 @@ function apply () {
 # kick off
 prepare "$1" "$fiddle_todo" && \
 	fiddle_sequence_editor "$fiddle_todo" && \
-		apply "$fiddle_todo" > "$1" && \
-			rm -f "$fiddle_todo"
+		apply "$fiddle_todo" > "$1";
+rm -f "$fiddle_todo"

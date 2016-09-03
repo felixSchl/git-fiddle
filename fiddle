@@ -52,6 +52,6 @@ git_rebase_args="$(strip_args "$@")"
 # actual editor choice, which will be invoked from the `git-fiddle` editor
 # itself.
 GIT_SEQUENCE_EDITOR="${SCRIPT_DIR}/editor" \
-GIT_FIDDLE_NOMSG="$GIT_FIDDLE_NOMSG" \
-GIT_FIDDLE_SEQUENCE_EDITOR="$ORIGINAL_GIT_SEQUENCE_EDITOR" \
-	git rebase "${git_rebase_args[@]}"
+	GIT_FIDDLE_NOMSG="$GIT_FIDDLE_NOMSG" \
+	GIT_FIDDLE_SEQUENCE_EDITOR="$ORIGINAL_GIT_SEQUENCE_EDITOR" \
+	git rebase -i "${git_rebase_args[@]}"
