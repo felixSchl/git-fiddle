@@ -1,0 +1,14 @@
+os:
+  - linux
+  - osx
+
+before_install:
+  - |
+    if [[ "$TRAVIS_OS_NAME" == osx ]]; then
+      brew isntall bats
+    else
+      apt-get install -y bats
+    fi
+
+script:
+  - bats tests/
