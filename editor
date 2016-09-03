@@ -1,0 +1,105 @@
+#!/bin/bash
+
+fiddler_todo=/tmp/git-fiddler.todo
+
+die() { echo "$@" 1>&2 ; exit 1; }
+
+# Get a little more information about each mentioned commit.
+# we allow the user to edit the author date, the author, and the short message
+while read -r line; do
+	if [ -z "$line" ] || [[ $line =~ ^[[:space:]]?# ]]; then
+		printf "%s\n" "$line"
+	else
+		echo "$line" | {
+			read -r action sha rest
+				printf "%s %s\n%s\n" "$action" "$sha" \
+					"$(git --no-pager show -s "$sha" | tail -n+2)"
+		}
+	fi
+done < "$1" > "$fiddler_todo"
+
+fiddler_sequence_editor () {
+	if [ -z "$FIDDLER_SEQUENCE_EDITOR" ]; then
+		FIDDLER_SEQUENCE_EDITOR="$(git config sequence.editor)"
+		if [ -z "$FIDDLER_SEQUENCE_EDITOR" ]; then
+			FIDDLER_SEQUENCE_EDITOR="$(git var GIT_EDITOR)" || return $?
+		fi
+	fi
+	eval "$FIDDLER_SEQUENCE_EDITOR" '"$@"'
+}
+
+# fiddler_sequence_editor "$fiddler_todo" || exit 1
+
+git stripspace --strip-comments < "$fiddler_todo" | awk '
+	function get_new_action(action, sha) {
+		if (match(action, "^pick|p|drop|d|reword|r|edit|e|squash|s|fixup|f$") &&
+			match(sha, "^[a-z0-9]{6,}$")) {
+			if      (action == "p") { return "pick";   }
+			else if (action == "d") { return "drop";   }
+			else if (action == "r") { return "reword"; }
+			else if (action == "e") { return "edit";   }
+			else if (action == "s") { return "squash"; }
+			else if (action == "f") { return "fixup";  }
+			else                    { return action;   }
+		} else { return ""; }
+	}
+
+	function emit(author, date, message) {
+		print "EMIT>" author " " date " " message
+	}
+
+	BEGIN {
+		state="" # <empty>|scanning_fields|scanning_message
+		mod_author=""
+		mod_date=""
+		mod_message=""
+	}
+
+	{
+		new_action=""
+		if (NF == 2) {
+			new_action=get_new_action($1, $2);
+		}
+
+		if (new_action=="") {
+			if (state == "scanning_fields") {
+				if (mod_author == "" && $1 == "Author:") {
+					mod_author = $0
+					sub("^Author:\s*", "", mod_author)
+				} else if (mod_date == "" && $1 == "Date:") {
+					mod_date = $0
+					sub("^Date:\s*", "", mod_date)
+				} else {
+					mod_message = $0
+					state = "scanning_message"
+				}
+			} else if (state == "scanning_message") {
+				mod_message = mod_message $0
+			} else {
+				# ignore ...
+			}
+		} else {
+			if (state != "") {
+				emit(mod_author, mod_date, mod_message)
+			}
+
+			# reset state
+			mod_author = ""
+			mod_date = ""
+			mod_message = ""
+
+			if (new_action=="pick") {
+				state="scanning_fields"
+				print $0
+			} else {
+				state = ""
+			}
+		}
+	}
+
+	END {
+		if (state != "") {
+			emit(mod_author, mod_date, mod_message)
+		}
+	}
+'

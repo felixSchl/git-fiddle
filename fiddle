@@ -1,0 +1,17 @@
+#!/bin/bash
+
+{
+rm -rf /tmp/foo
+mkdir -p /tmp/foo
+cd /tmp/foo
+git init
+touch A && git add -A && git commit -m A
+touch B && git add -A && git commit -m B
+touch C && git add -A && git commit -m C
+git status
+} &> /dev/null
+
+original_git_sequence_editor="$GIT_SEQUENCE_EDITOR"
+GIT_SEQUENCE_EDITOR=/Users/felix/projects/git-fiddle/editor \
+FIDDLER_SEQUENCE_EDITOR="$original_git_sequence_editor" \
+    git rebase -i -p HEAD~2
