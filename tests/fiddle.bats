@@ -52,9 +52,12 @@ function init_repo () {
 	[ $status -eq 0 ]
 
 	# count the expected lines: 1 action and no messages => 1 line
-	run cat git stripspace --strip-comments < todo-contents | wc -l
+	run bash -c 'git stripspace --strip-comments < todo-contents | wc -l'
 	[ $status -eq 0 ]
-	[[ $output == '1' ]]
+	if [[ ! $output == 1 ]]; then
+		echo "$output"
+		return 1
+	fi
 
 	run git show -s HEAD --format='%s'
 	[ $status -eq 0 ]

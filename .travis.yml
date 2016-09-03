@@ -13,4 +13,4 @@ before_install:
     fi
 
 script:
-  - bats tests/
+  - bats -p tests/
