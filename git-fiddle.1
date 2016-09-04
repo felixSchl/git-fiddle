@@ -1,0 +1,21 @@
+.\" Manpage for git\-fiddle.
+.\" Contact felixschlitter@gmail.com to correct errors or typos.
+.TH man 1 "04 Sep 2016" "1.0" "git-fiddle man page"
+.SH NAME
+git\-fiddle \- Edit commit messages, authors and timestamps during git\-rebase
+.SH SYNOPSIS
+.B fiddle
+[\fB\-\-[no\-]\-fiddle\-messages\fR] [\fBargs...\fR]
+.SH OPTIONS
+.TP
+.BR \-\-[no-]fiddle-messages
+Do not edit commit messages. Useful for quick edits to author or date.
+.br
+This value can also be set using `git config fiddle.messages`.
+.TP
+.BR [args...]
+These arguments are passed verbatim to git-rebase.
+.SH BUGS
+No known bugs.
+.SH AUTHOR
+Felix Schlitter <felixschlitter@gmail.com>
