@@ -18,7 +18,7 @@ EOF
 )"
 
 # process the '--no-messages' option
-GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>\n%s'
+GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>\n%s\n\n%b'
 if [ "${GIT_FIDDLE_NOMSG-false}" = true ]; then
 	GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>'
 fi
@@ -53,12 +53,12 @@ function emit () {
 	local -r date="$2"
 	local -r message="$3"
 
-	local c="exec"
+	local c='exec'
 	[ ! -z "$date" ] && c="$c GIT_AUTHOR_DATE='$date'"
 	c="$c git commit --amend --no-edit"
 	[ ! -z "$date" ] && c="$c --date='$date'"
 	[ ! -z "$author" ] && c="$c --author='$author'"
-	[ ! -z "$message" ] && c="$c --message='$message'"
+	[ ! -z "$message" ] && c="$c --message=\$'$message'"
 	echo "$c"
 }
 
@@ -66,7 +66,8 @@ function apply () {
 	set -eo pipefail
 
 	local scanning=0
-	declare -a mod_date mod_author mod_message
+	mod_message=
+	declare -a mod_date mod_author
 
 	while read -r line; do
 		read -r action sha rest < <(echo "$line")
@@ -75,7 +76,7 @@ function apply () {
 
 				# flush the current scan
 				if [ $scanning -eq 1 ]; then
-					emit "${mod_author[*]}" "${mod_date[*]}" "${mod_message[*]}"
+					emit "${mod_author[*]}" "${mod_date[*]}" "$mod_message"
 				fi
 
 				# retain the action
@@ -83,8 +84,9 @@ function apply () {
 
 				# reset state
 				scanning=0
-				unset mod_date mod_author mod_message
-				declare -a mod_date mod_author mod_message
+				mod_message=
+				unset mod_date mod_author
+				declare -a mod_date mod_author
 
 				# begin a fresh scan for 'pick' actions
 				if [[ "$action" == pick ]]; then
@@ -104,13 +106,13 @@ function apply () {
 		fi
 
 		if [ $scanning -eq 1 ]; then
-			mod_message+=("$line");
+			mod_message="$mod_message\n$line"
 		fi
 	done < <(git stripspace --strip-comments < "$1")
 
 	# flush the current scan
 	if [ $scanning -eq 1 ]; then
-		emit "${mod_author[*]}" "${mod_date[*]}" "${mod_message[*]}"
+		emit "${mod_author[*]}" "${mod_date[*]}" "$mod_message"
 	fi
 }
 

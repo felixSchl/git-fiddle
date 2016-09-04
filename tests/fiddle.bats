@@ -27,10 +27,15 @@ function init_repo () {
 	)" run git_fiddle HEAD~
 	[ $status -eq 0 ]
 
-	run git show -s HEAD --format='%s'
-    echo "$output"
+	run git show -s HEAD $'--format=%s\n\n%b'
 	[ $status -eq 0 ]
-	[[ $output == 'Commit B' ]]
+	[[ $output == "$(cat <<-'EOF'
+		Commit B
+
+		This is the first commit.
+		In a series of commits
+	EOF
+	)" ]]
 }
 
 @test "fiddle: change multiple commit messages" {
@@ -61,13 +66,24 @@ function init_repo () {
 	)" run git_fiddle HEAD~2
 	[ $status -eq 0 ]
 
-	run git show -s HEAD~ --format='%s'
+	run git show -s HEAD~ $'--format=%s\n\n%b'
 	[ $status -eq 0 ]
-	[[ $output == 'Commit Z' ]]
+	[[ $output == "$(cat <<-'EOF'
+		Commit Z
 
-	run git show -s HEAD --format='%s'
+		This is the first commit.
+		In a series of commits
+	EOF
+	)" ]]
+
+	run git show -s HEAD $'--format=%s\n\n%b'
 	[ $status -eq 0 ]
-	[[ $output == 'Commit Y' ]]
+	[[ $output == "$(cat <<-'EOF'
+		Commit Y
+
+		This is the second commit.
+	EOF
+	)" ]]
 }
 
 @test "fiddle: --no-messages" {
