@@ -18,7 +18,7 @@ Edit commit meta information during an *interactive* rebase.
 `git-fiddle(1)' is a lightweight wrapper around `git-rebase(1)' that
 annotates each commit with it's *author* date, the author name, as well
 as the commit message. Changes to any of these will then be applied
-using a 'exec' script during the git-rebase sequence.
+using an 'exec' script during the git-rebase sequence.
 
 Usage:
   $SCRIPT [--[no-]-fiddle-messages] [args...]
