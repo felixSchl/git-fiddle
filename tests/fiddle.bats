@@ -38,6 +38,32 @@ function init_repo () {
 	)" ]]
 }
 
+@test 'fiddle: parse commit messages that looks similar to action' {
+	init_repo &> /dev/null
+
+	touch A && git add -A && git commit -m "$(cat <<-'EOF'
+		Commit A
+
+		use 12fbac
+	EOF
+	)" &> /dev/null
+
+	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
+		#!/bin/sh
+		sed -i.bak -e 's/Commit A/Commit B/g' "$1"
+	EOF
+	)" run git_fiddle HEAD~
+	[ $status -eq 0 ]
+
+	run git show -s HEAD $'--format=%s\n\n%b'
+	[ $status -eq 0 ]
+	[[ $output == "$(cat <<-'EOF'
+		Commit B
+
+		use 12fbac
+	EOF
+	)" ]]
+}
 
 @test 'fiddle: abort editing' {
 	init_repo &> /dev/null

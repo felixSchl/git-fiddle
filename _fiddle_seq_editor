@@ -75,7 +75,9 @@ function apply () {
 
 	while read -r line; do
 		read -r action sha rest < <(echo "$line")
-		if [[ "$action" =~ ^pick|p|drop|d|reword|r|edit|e|squash|s|fixup|f$ ]]; then
+		if echo "$action" \
+			| grep -E -q '^(pick|p|drop|d|reword|r|edit|e|squash|s|fixup|f)$'
+		then
 			if [[ "$sha" =~ ^[0-9a-z]{6,}$ ]]; then
 
 				# flush the current scan
