@@ -1,6 +1,4 @@
-# git-fiddle
-
-[![Build Status](https://travis-ci.com/felixSchl/git-fiddle.svg&branch=master)](https://travis-ci.com/felixSchl/git-fiddle)
+# git-fiddle [![Build Status](https://travis-ci.com/felixSchl/git-fiddle.svg&branch=master)](https://travis-ci.com/felixSchl/git-fiddle)
 
 <img
   src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/The_Cat_and_the_Fiddle.png/760px-The_Cat_and_the_Fiddle.png"
