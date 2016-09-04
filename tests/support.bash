@@ -21,7 +21,7 @@ function x_mktemp () {
   mktemp -d 2>/dev/null || mktemp -d -t "$prefix"
 }
 
-# create a exectuable script either from the first argument or from stdin.
+# create an executable script either from the first argument or from stdin.
 function mk_script () {
   local -r script="$1"
   local -r tmp_dir="$(x_mktemp)"
