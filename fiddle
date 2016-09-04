@@ -59,7 +59,7 @@ fi
 # invoke `git-rebase' using a custom editor, effectively wrapping the user's
 # actual editor choice, which will be invoked from the `git-fiddle` editor
 # itself.
-GIT_SEQUENCE_EDITOR="${SCRIPT_DIR}/editor" \
+GIT_SEQUENCE_EDITOR="${SCRIPT_DIR}/_fiddle_seq_editor" \
 	GIT_FIDDLE_MSG="$git_fiddle_msg" \
 	GIT_FIDDLE_SEQUENCE_EDITOR="$ORIGINAL_GIT_SEQUENCE_EDITOR" \
 	git rebase -i "${git_rebase_args[@]}"
