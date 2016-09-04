@@ -1,4 +1,4 @@
-# git-fiddle [![Build Status](https://travis-ci.com/felixSchl/git-fiddle.svg&branch=master)](https://travis-ci.com/felixSchl/git-fiddle)
+# git-fiddle [![Build Status](https://travis-ci.com/felixSchl/git-fiddle.svg?token=xoiHuBog1EBjhZry4bxb&branch=master)](https://travis-ci.com/felixSchl/git-fiddle)
 
 `git-fiddle` is a wrapper around `git-rebase(1)` that allows editing of commit
 information straight from the `git-rebase` editor, such as the author date,
