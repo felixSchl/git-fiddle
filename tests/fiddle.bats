@@ -28,8 +28,46 @@ function init_repo () {
 	[ $status -eq 0 ]
 
 	run git show -s HEAD --format='%s'
+    echo "$output"
 	[ $status -eq 0 ]
 	[[ $output == 'Commit B' ]]
+}
+
+@test "fiddle: change multiple commit messages" {
+	init_repo &> /dev/null
+
+	touch A && git add -A && git commit -m "$(cat <<-'EOF'
+		Commit A
+
+		This is the first commit.
+		In a series of commits
+	EOF
+	)" &> /dev/null
+
+	touch B && git add -A && git commit -m "$(cat <<-'EOF'
+		Commit B
+
+		This is the second commit.
+	EOF
+	)" &> /dev/null
+
+	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
+		#!/bin/sh
+		sed -i.bak \
+			-e 's/Commit A/Commit Z/g' \
+			-e 's/Commit B/Commit Y/g' \
+			"$1"
+	EOF
+	)" run git_fiddle HEAD~2
+	[ $status -eq 0 ]
+
+	run git show -s HEAD~ --format='%s'
+	[ $status -eq 0 ]
+	[[ $output == 'Commit Z' ]]
+
+	run git show -s HEAD --format='%s'
+	[ $status -eq 0 ]
+	[[ $output == 'Commit Y' ]]
 }
 
 @test "fiddle: --no-messages" {
@@ -52,12 +90,8 @@ function init_repo () {
 	[ $status -eq 0 ]
 
 	# count the expected lines: 1 action and no messages => 1 line
-	run bash -c 'git stripspace --strip-comments < todo-contents | wc -l'
-	[ $status -eq 0 ]
-	if [[ ! $output == 1 ]]; then
-		echo "$output"
-		return 1
-	fi
+	output="$(git stripspace --strip-comments < todo-contents | wc -l)"
+	[[ "$output" == 1 ]]
 
 	run git show -s HEAD --format='%s'
 	[ $status -eq 0 ]

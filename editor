@@ -63,10 +63,11 @@ function emit () {
 }
 
 function apply () {
-	local mod_date=
-	local mod_author=
-	local mod_message=
+	set -eo pipefail
+
 	local scanning=0
+	declare -a mod_date mod_author mod_message
+
 	while read -r line; do
 		read -r action sha rest < <(echo "$line")
 		if [[ "$action" =~ ^pick|p|drop|d|reword|r|edit|e|squash|s|fixup|f$ ]]; then
@@ -74,17 +75,16 @@ function apply () {
 
 				# flush the current scan
 				if [ $scanning -eq 1 ]; then
-					emit "$mod_author" "$mod_date" "$mod_message"
+					emit "${mod_author[*]}" "${mod_date[*]}" "${mod_message[*]}"
 				fi
 
 				# retain the action
 				echo "$action $sha"
-				
+
 				# reset state
-				mod_date=
-				mod_author=
-				mod_message=
 				scanning=0
+				unset mod_date mod_author mod_message
+				declare -a mod_date mod_author mod_message
 
 				# begin a fresh scan for 'pick' actions
 				if [[ "$action" == pick ]]; then
@@ -93,12 +93,8 @@ function apply () {
 					for col in $rest; do
 						if [[ "$col" == by: ]]; then m=1; else
 							case $m in
-								0) mod_date="$mod_date$(
-										[ ! -z "$mod_date" ] && echo ' '
-									)$col"; ;;
-								1) mod_author="$mod_author$(
-										[ ! -z "$mod_author" ] && echo ' '
-									)$col"; ;;
+								0) mod_date+=("$col"); ;;
+								1) mod_author+=("$col"); ;;
 							esac
 						fi
 					done
@@ -108,15 +104,13 @@ function apply () {
 		fi
 
 		if [ $scanning -eq 1 ]; then
-			mod_message="$mod_message$(
-				[ ! -z "$mod_message" ] && echo $'\n'
-			)$line"
+			mod_message+=("$line");
 		fi
 	done < <(git stripspace --strip-comments < "$1")
 
 	# flush the current scan
 	if [ $scanning -eq 1 ]; then
-		emit "$mod_author" "$mod_date" "$mod_message"
+		emit "${mod_author[*]}" "${mod_date[*]}" "${mod_message[*]}"
 	fi
 }
 
