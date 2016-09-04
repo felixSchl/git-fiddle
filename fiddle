@@ -10,12 +10,13 @@
 # using a 'exec' script during the git-rebase sequence.
 #
 # Usage:
-#   $SCRIPT [--[no-]messages] [args...]
+#   $SCRIPT [--[no-]fiddle-messages] [args...]
 #
 # Options:
-#   --no-messages Do not edit commit messages. Useful for quick edits to
-#                 author or date.
-#   [args...]     These arguments are passed verbatim to git-rebase.
+#   --[no-]fiddle-messages Do not edit commit messages. Useful for quick edits
+#                          to author or date. This value can also be set using
+#                          `git config fiddle.messages`.
+#   [args...]              These arguments are passed verbatim to git-rebase.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORIGINAL_GIT_SEQUENCE_EDITOR="$GIT_SEQUENCE_EDITOR"
@@ -36,20 +37,29 @@ case "${1---help}" in
 esac
 
 # strip args to `git-fiddle' from argv, so git-rebase won't reject them.
-git_fiddle_nomsg=false
+git_fiddle_msg=
 declare -a git_rebase_args
 while [ $# -gt 0 ]; do
 	case "$1" in
-		--no-messages) git_fiddle_nomsg=true; ;;
+		--no-fiddle-messages) git_fiddle_msg=false; ;;
+		--fiddle-messages) git_fiddle_msg=true; ;;
 		*) git_rebase_args+=("$1"); ;;
 	esac
 	shift
 done
 
+# load config where needed
+if [ -z "$git_fiddle_msg" ]; then
+	git_fiddle_msg="$(git config fiddle.messages)"
+	if [ -z "$git_fiddle_msg" ]; then
+		git_fiddle_msg=true
+	fi
+fi
+
 # invoke `git-rebase' using a custom editor, effectively wrapping the user's
 # actual editor choice, which will be invoked from the `git-fiddle` editor
 # itself.
 GIT_SEQUENCE_EDITOR="${SCRIPT_DIR}/editor" \
-	GIT_FIDDLE_NOMSG="$git_fiddle_nomsg" \
+	GIT_FIDDLE_MSG="$git_fiddle_msg" \
 	GIT_FIDDLE_SEQUENCE_EDITOR="$ORIGINAL_GIT_SEQUENCE_EDITOR" \
 	git rebase -i "${git_rebase_args[@]}"

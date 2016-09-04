@@ -21,15 +21,16 @@ as the commit message. Changes to any of these will then be applied
 using a 'exec' script during the git-rebase sequence.
 
 Usage:
-  $SCRIPT [--[no-]messages] [args...]
+  $SCRIPT [--[no-]-fiddle-messages] [args...]
 
 Options:
-  --no-messages Do not edit commit messages. Useful for quick edits to
-                author or date.
-  [args...]     These arguments are passed verbatim to git-rebase.
+  --[no-]fiddle-messages Do not edit commit messages. Useful for quick edits
+                         to author or date. This value can also be set using
+                         `git config fiddle.messages`.
+  [args...]              These arguments are passed verbatim to git-rebase.
 ```
 
 ## License
 
-<strong>git-fiddle</strong> is released under the **MIT LICENSE**.
+**git-fiddle** is released under the **MIT LICENSE**.
 See file `LICENSE` for a more detailed description of its terms.

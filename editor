@@ -12,7 +12,7 @@ fiddle_todo="$1".fiddle
 
 trap '{
 	exit_code=$?
-	# rm -f "$fiddle_todo" || :
+	rm -f "$fiddle_todo" || :
 	exit $exit_code
 }' EXIT
 
@@ -23,9 +23,9 @@ FIDDLE_MESSAGE="$(cat <<-'EOF'
 EOF
 )"
 
-# process the '--no-messages' option
+# process the '--no-fiddle-messages' option
 GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>\n%s\n\n%b'
-if [ "${GIT_FIDDLE_NOMSG-false}" = true ]; then
+if [ "${GIT_FIDDLE_MSG-true}" = false ]; then
 	GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>'
 fi
 

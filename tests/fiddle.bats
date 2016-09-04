@@ -109,33 +109,25 @@ function init_repo () {
 	)" ]]
 }
 
-@test 'fiddle: --no-messages' {
+@test 'fiddle: git config fiddle.messages' {
 	init_repo &> /dev/null
 
-	touch A && git add -A && git commit -m "$(cat <<-'EOF'
-		Commit A
+    git config fiddle.messages false
 
-		This is the first commit.
-		In a series of commits
-	EOF
-	)" &> /dev/null
+	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
 
 	GIT_SEQUENCE_EDITOR="$(mk_script <<-EOF
 		#!/bin/sh
-		cat "\$1" > "$PWD/todo-contents"
 		sed -i.bak -e 's/Commit A/Commit B/g' "\$1"
 	EOF
-	)" run git_fiddle --no-messages HEAD~
+	)" run git_fiddle HEAD~
 	[ $status -eq 0 ]
-
-	# count the expected lines: 1 action and no messages => 1 line
-	output="$(git stripspace --strip-comments < todo-contents | wc -l)"
-	[[ "$output" == 1 ]]
 
 	run git show -s HEAD --format='%s'
 	[ $status -eq 0 ]
 	[[ $output == 'Commit A' ]]
 }
+
 
 @test 'fiddle: change commit author' {
 	init_repo &> /dev/null
