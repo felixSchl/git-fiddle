@@ -28,11 +28,9 @@ function prepare () {
 		if [ -z "$line" ] || [[ $line =~ ^[[:space:]]?# ]]; then
 			printf "%s\n" "$line"
 		else
-			echo "$line" | {
-				read -r action sha rest
-				printf "%s %s %s\n\n" "$action" "$sha" \
-					"$(git --no-pager show -s "$sha" "$GIT_PRETTY_FORMAT")"
-			}
+			read -r action sha rest < <(echo "$line")
+			printf "%s %s %s\n\n" "$action" "$sha" \
+				"$(git --no-pager show -s "$sha" "$GIT_PRETTY_FORMAT")"
 		fi
 	done < "$1" > "$2"
 	echo "$FIDDLE_MESSAGE" >> "$2"
