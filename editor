@@ -117,5 +117,5 @@ function apply () {
 # kick off
 prepare "$1" "$fiddle_todo" && \
 	fiddle_sequence_editor "$fiddle_todo" && \
-		apply "$fiddle_todo" > "$1";
+		apply "$fiddle_todo" > "$1" || exit $?;
 rm -f "$fiddle_todo"
