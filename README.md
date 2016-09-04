@@ -1,17 +1,9 @@
 # git-fiddle [![Build Status](https://travis-ci.com/felixSchl/git-fiddle.svg&branch=master)](https://travis-ci.com/felixSchl/git-fiddle)
 
-<img
-  src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/The_Cat_and_the_Fiddle.png/760px-The_Cat_and_the_Fiddle.png"
-  height="200"
-  align="left"
-  />
-
 `git-fiddle` is a wrapper around `git-rebase(1)` that allows editing of commit
 information straight from the `git-rebase` editor, such as the author date,
 author name and commit message. This makes it trivial to edit a whole range
 of commits, shift them through time or alter ownership.
-
-<br clear="left"/>
 
 ## Usage
 
