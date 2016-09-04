@@ -9,7 +9,7 @@ function init_repo () {
 	touch .gitgnore && git add -A && git commit -m 'Initial commit'
 }
 
-@test "fiddle: change commit messages" {
+@test 'fiddle: change commit messages' {
 	init_repo &> /dev/null
 
 	touch A && git add -A && git commit -m "$(cat <<-'EOF'
@@ -38,7 +38,30 @@ function init_repo () {
 	)" ]]
 }
 
-@test "fiddle: change multiple commit messages" {
+
+@test 'fiddle: abort editing' {
+	init_repo &> /dev/null
+
+	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
+
+	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
+		#!/bin/sh
+		sed -i.bak -e 's/Commit A/Commit B/g' "$1"
+		echo "$1" > "$PWD/todo-location"
+		exit 1 # abort
+	EOF
+	)" run git_fiddle HEAD~
+	[ $status -eq 1 ]
+
+	# directory shouldn't exist (rebase aborted)
+	[ ! -f "$(cat todo-location)" ]
+
+	run git show -s HEAD $'--format=%s'
+	[ $status -eq 0 ]
+	[[ $output == $'Commit A' ]]
+}
+
+@test 'fiddle: change multiple commit messages' {
 	init_repo &> /dev/null
 
 	touch A && git add -A && git commit -m "$(cat <<-'EOF'
@@ -86,7 +109,7 @@ function init_repo () {
 	)" ]]
 }
 
-@test "fiddle: --no-messages" {
+@test 'fiddle: --no-messages' {
 	init_repo &> /dev/null
 
 	touch A && git add -A && git commit -m "$(cat <<-'EOF'
@@ -114,7 +137,7 @@ function init_repo () {
 	[[ $output == 'Commit A' ]]
 }
 
-@test "fiddle: change commit author" {
+@test 'fiddle: change commit author' {
 	init_repo &> /dev/null
 
 	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
@@ -131,7 +154,7 @@ function init_repo () {
 	[[ "$output" == "Quz Baz <quz@baz.com>" ]]
 }
 
-@test "fiddle: change commit author date" {
+@test 'fiddle: change commit author date' {
 	init_repo &> /dev/null
 
 	local -r before='Wed Aug 17 15:47:08 2016 +1200'

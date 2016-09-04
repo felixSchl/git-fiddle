@@ -10,6 +10,12 @@
 
 fiddle_todo="$1".fiddle
 
+trap '{
+	exit_code=$?
+	# rm -f "$fiddle_todo" || :
+	exit $exit_code
+}' EXIT
+
 FIDDLE_MESSAGE="$(cat <<-'EOF'
 	#
 	# WARNING: any changes to the author, date and message are only retained
@@ -118,4 +124,3 @@ function apply () {
 prepare "$1" "$fiddle_todo" && \
 	fiddle_sequence_editor "$fiddle_todo" && \
 		apply "$fiddle_todo" > "$1" || exit $?;
-rm -f "$fiddle_todo"
