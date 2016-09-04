@@ -69,7 +69,7 @@ function emit () {
 function apply () {
 	set -eo pipefail
 
-	local scanning=0
+	local scanning=false
 	mod_message=
 	declare -a mod_date mod_author
 
@@ -79,7 +79,7 @@ function apply () {
 			if [[ "$sha" =~ ^[0-9a-z]{6,}$ ]]; then
 
 				# flush the current scan
-				if [ $scanning -eq 1 ]; then
+				if $scanning; then
 					emit "${mod_author[*]}" "${mod_date[*]}" "$mod_message"
 				fi
 
@@ -87,7 +87,7 @@ function apply () {
 				echo "$action $sha"
 
 				# reset state
-				scanning=0
+				scanning=false
 				mod_message=
 				unset mod_date mod_author
 				declare -a mod_date mod_author
@@ -95,7 +95,7 @@ function apply () {
 				# begin a fresh scan for 'pick' actions
 				if [[ "$action" == pick ]]; then
 					m=0
-					scanning=1
+					scanning=true
 					for col in $rest; do
 						if [[ "$col" == by: ]]; then m=1; else
 							case $m in
@@ -109,13 +109,13 @@ function apply () {
 			fi
 		fi
 
-		if [ $scanning -eq 1 ]; then
+		if $scanning; then
 			mod_message="$mod_message\n$line"
 		fi
 	done < <(git stripspace --strip-comments < "$1")
 
 	# flush the current scan
-	if [ $scanning -eq 1 ]; then
+	if $scanning; then
 		emit "${mod_author[*]}" "${mod_date[*]}" "$mod_message"
 	fi
 }
