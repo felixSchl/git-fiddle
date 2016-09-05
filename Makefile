@@ -4,6 +4,10 @@ test:
 	bats tests
 
 watch:
-	fswatch git-fiddle _fiddle_seq_editor tests/*.bats tests/*.bash | \
-		xargs -I{} -n1 make test
-
+	fswatch -x git-fiddle _fiddle_seq_editor tests/*.bats tests/*.bash 2>/dev/null | \
+		while read -r f attr; do \
+			if ! [ -z "$$f" ] && [ "$$attr" = "Updated" ]; then \
+				echo "file changed: $$f ($$attr)"; \
+				make test; \
+			fi; \
+		done
