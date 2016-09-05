@@ -157,7 +157,7 @@ function init_repo () {
 @test 'fiddle: --no-fiddle-subject' {
 	init_repo &> /dev/null
 
-	git config fiddle.subject true
+	git config fiddle.subject true # should be overwritten by flag
 
 	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
 
@@ -189,6 +189,90 @@ function init_repo () {
 	run git show -s HEAD --format='%an <%ae>'
 	[ $status -eq 0 ]
 	[[ "$output" == "Quz Baz <quz@baz.com>" ]]
+}
+
+@test 'fiddle: git config fiddle.author.email (off)' {
+	init_repo &> /dev/null
+
+	git config fiddle.author.email false
+
+	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
+
+	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
+		#!/bin/sh
+		sed -i.bak -e 's/<foo@bar.com>/<quz@baz.com>/g' "$1"
+	EOF
+	)" run git_fiddle HEAD~
+	[ $status -eq 0 ]
+
+	run git show -s HEAD --format='<%ae>'
+	[ $status -eq 0 ]
+
+    # it shouldn've have changed, since the string wasn't found
+	[[ "$output" == "<foo@bar.com>" ]]
+}
+
+@test 'fiddle: --no-fiddle-author-email' {
+	init_repo &> /dev/null
+
+	git config fiddle.author.email true # should be overwritten by flag
+
+	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
+
+	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
+		#!/bin/sh
+		sed -i.bak -e 's/<foo@bar.com>/<quz@baz.com>/g' "$1"
+	EOF
+	)" run git_fiddle --no-fiddle-author-email HEAD~
+	[ $status -eq 0 ]
+
+	run git show -s HEAD --format='<%ae>'
+	[ $status -eq 0 ]
+
+    # it shouldn've have changed, since the string wasn't found
+	[[ "$output" == "<foo@bar.com>" ]]
+}
+
+@test 'fiddle: git config fiddle.author (off)' {
+	init_repo &> /dev/null
+
+	git config fiddle.author false
+
+	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
+
+	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
+		#!/bin/sh
+		sed -i.bak -e 's/<foo@bar.com>/<quz@baz.com>/g' "$1"
+	EOF
+	)" run git_fiddle HEAD~
+	[ $status -eq 0 ]
+
+	run git show -s HEAD --format='%an'
+	[ $status -eq 0 ]
+
+    # it shouldn've have changed, since the string wasn't found
+	[[ "$output" == "Foo Bar" ]]
+}
+
+@test 'fiddle: --no-fiddle-author' {
+	init_repo &> /dev/null
+
+	git config fiddle.author true # should be overwritten by flag
+
+	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
+
+	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
+		#!/bin/sh
+		sed -i.bak -e 's/<foo@bar.com>/<quz@baz.com>/g' "$1"
+	EOF
+	)" run git_fiddle --no-fiddle-author HEAD~
+	[ $status -eq 0 ]
+
+	run git show -s HEAD --format='%an'
+	[ $status -eq 0 ]
+
+    # it shouldn've have changed, since the string wasn't found
+	[[ "$output" == "Foo Bar" ]]
 }
 
 @test 'fiddle: should escape quotes' {
