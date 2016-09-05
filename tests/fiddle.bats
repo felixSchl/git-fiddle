@@ -179,7 +179,7 @@ function init_repo () {
 
 	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
 		#!/bin/sh
-		sed -i.bak -e 's/by: .*/by: Quz "Baz \"\\\"" <quz@baz.com>/g' "$1"
+		sed -i.bak -e "s/by: .*/by: ' Quz \"Baz \\"\\\\"\" <quz@baz.com>/g" "$1"
 	EOF
 	)" run git_fiddle HEAD~
 	[ $status -eq 0 ]

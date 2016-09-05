@@ -52,6 +52,10 @@ function fiddle_sequence_editor () {
 	eval "$GIT_FIDDLE_SEQUENCE_EDITOR" '"$@"'
 }
 
+function esc () {
+	echo "$1" | sed -e "s/'/'\"'\"'/g"
+}
+
 function emit () {
 	local -r author="$1"
 	local -r date="$2"
@@ -60,9 +64,9 @@ function emit () {
 	local c=
 	[ ! -z "$date" ] && c="GIT_AUTHOR_DATE='$date'"
 	c="$c git commit --amend --no-edit"
-	[ ! -z "$date" ] && c="$c --date='$date'"
-	[ ! -z "$author" ] && c="$c --author='$author'"
-	[ ! -z "$message" ] && c="$c --message=\$'$message'"
+	[ ! -z "$date" ] && c="$c --date='$(esc "$date")'"
+	[ ! -z "$author" ] && c="$c --author='$(esc "$author")'"
+	[ ! -z "$message" ] && c="$c --message=\$'$(esc "$message")'"
 
 	echo "exec bash -c \"$(echo "$c" | sed \
 		-e 's/\\/\\\\/g' \
