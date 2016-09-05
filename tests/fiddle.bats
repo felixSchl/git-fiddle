@@ -172,6 +172,23 @@ function init_repo () {
 	[[ "$output" == "Quz Baz <quz@baz.com>" ]]
 }
 
+@test 'fiddle: should escape quotes' {
+	init_repo &> /dev/null
+
+	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
+
+	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
+		#!/bin/sh
+		sed -i.bak -e 's/by: .*/by: Quz "Baz \"\\\"" <quz@baz.com>/g' "$1"
+	EOF
+	)" run git_fiddle HEAD~
+	[ $status -eq 0 ]
+
+	run git show -s HEAD --format='%an <%ae>'
+	[ $status -eq 0 ]
+	[[ "$output" == 'Quz "Baz <quz@baz.com>' ]]
+}
+
 @test 'fiddle: change commit author date' {
 	init_repo &> /dev/null
 

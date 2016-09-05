@@ -57,13 +57,17 @@ function emit () {
 	local -r date="$2"
 	local -r message="$3"
 
-	local c='exec'
-	[ ! -z "$date" ] && c="$c GIT_AUTHOR_DATE='$date'"
+	local c=
+	[ ! -z "$date" ] && c="GIT_AUTHOR_DATE='$date'"
 	c="$c git commit --amend --no-edit"
 	[ ! -z "$date" ] && c="$c --date='$date'"
 	[ ! -z "$author" ] && c="$c --author='$author'"
 	[ ! -z "$message" ] && c="$c --message=\$'$message'"
-	echo "$c"
+
+	echo "exec bash -c \"$(echo "$c" | sed \
+		-e 's/\\/\\\\/g' \
+		-e 's/"/\\"/g'
+	)\""
 }
 
 function apply () {
