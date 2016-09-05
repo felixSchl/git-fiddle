@@ -23,11 +23,47 @@ FIDDLE_MESSAGE="$(cat <<-'EOF'
 EOF
 )"
 
-# process the '--no-fiddle-messages' option
-GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>\n%s\n\n%b'
-if [ "${GIT_FIDDLE_MSG-true}" = false ]; then
-	GIT_PRETTY_FORMAT=$'--format=%ad by: %an <%ae>'
-fi
+function trim () {
+	echo "$1" | sed -e '
+		s/^[[:space:]]*//
+		s/[[:space:]]*$//
+	'
+}
+
+function create_git_pretty_format () {
+	local format=
+
+	# --[no-]fiddle-author
+	if ! [ "$GIT_FIDDLE_AUTHOR" = false ]; then
+		format="$(trim "$format %an")"
+		if ! [ "$GIT_FIDDLE_AUTHOR_EMAIL" = false ]; then
+			format="$format <%ae>"
+		fi
+	fi
+
+	# --[no-]fiddle-date
+	if ! [ "$GIT_FIDDLE_AUTHOR_DATE" = false ]; then
+		format="$(trim "$format @ %ad")"
+	fi
+
+	# --[no-]fiddle-subject
+	if ! [ "$GIT_FIDDLE_SUBJECT" = false ]; then
+		format="$(trim "$format> %s")"
+	fi
+
+	# --[no-]fiddle-body
+	if ! [ "$GIT_FIDDLE_BODY" = false ]; then
+		if [ "$GIT_FIDDLE_SUBJECT" = false ]; then
+			format="$(trim "$format"$'%s\n%b')"
+		else
+			format="$(trim "$format"$'\n%b')"
+		fi
+	fi
+
+	echo "$format"
+}
+
+GIT_PRETTY_FORMAT="--format=$(create_git_pretty_format)"
 
 function prepare () {
 	while read -r line; do
@@ -35,8 +71,9 @@ function prepare () {
 			printf "%s\n" "$line"
 		else
 			read -r action sha rest < <(echo "$line")
-			printf "%s %s %s\n\n" "$action" "$sha" \
-				"$(git --no-pager show -s "$sha" "$GIT_PRETTY_FORMAT")"
+			printf "%s %s %s\n" "$action" "$sha" \
+				"$(git --no-pager show -s "$sha" "$GIT_PRETTY_FORMAT" | \
+					git stripspace)"
 		fi
 	done < "$1" > "$2"
 	echo "$FIDDLE_MESSAGE" >> "$2"
@@ -57,29 +94,46 @@ function esc () {
 }
 
 function emit () {
-	local -r author="$1"
-	local -r date="$2"
-	local -r message="$3"
+	local -r sha="$1"
+	local -r author="$2"
+	local -r date="$3"
+
+	local subject="$4"
+	local message="$5"
+
+	if [ -z "$message" ]; then
+		if [ -z "$subject" ]; then
+			message="$(git --no-pager show -s "$sha" --format=$'%s\n%b')"
+		else
+			message="$subject\n$(git --no-pager show -s "$sha" --format=$'%b')"
+		fi
+	else
+		if [ ! -z "$subject" ]; then
+			message="$subject\n$message"
+		fi
+	fi
 
 	local c=
 	[ ! -z "$date" ] && c="GIT_AUTHOR_DATE='$date'"
 	c="$c git commit --amend --no-edit"
 	[ ! -z "$date" ] && c="$c --date='$(esc "$date")'"
 	[ ! -z "$author" ] && c="$c --author='$(esc "$author")'"
-	[ ! -z "$message" ] && c="$c --message=\$'$(esc "$message")'"
+	c="$c --message=$'$(esc "$message")'"
 
 	echo "exec bash -c \"$(echo "$c" | sed \
 		-e 's/\\/\\\\/g' \
-		-e 's/"/\\"/g'
+		-e 's/"/\\"/g' \
+		-e ':a;N;$!ba;s/\n/\\n/g'
 	)\""
 }
 
 function apply () {
 	set -eo pipefail
 
-	local scanning=false
-	mod_message=
-	declare -a mod_date mod_author
+	local m=1
+	local cur_sha=
+	local scanning_body=false
+	local _author _date _subject _message
 
 	while read -r line; do
 		read -r action sha rest < <(echo "$line")
@@ -89,44 +143,96 @@ function apply () {
 			if [[ "$sha" =~ ^[0-9a-z]{6,}$ ]]; then
 
 				# flush the current scan
-				if $scanning; then
-					emit "${mod_author[*]}" "${mod_date[*]}" "$mod_message"
+				if $scanning_body; then
+					emit "$cur_sha" "$_author" "$_date" "$_subject" "$_message"
 				fi
 
 				# retain the action
 				echo "$action $sha"
 
 				# reset state
-				scanning=false
-				mod_message=
-				unset mod_date mod_author
-				declare -a mod_date mod_author
+				scanning_body=false
+				_author=
+				_date=
+				_subject=
+				_message=
+				declare -a output
 
 				# begin a fresh scan for 'pick' actions
 				if [[ "$action" == pick ]]; then
-					m=0
-					scanning=true
-					for col in $rest; do
-						if [[ "$col" == by: ]]; then m=1; else
-							case $m in
-								0) mod_date+=("$col"); ;;
-								1) mod_author+=("$col"); ;;
-							esac
-						fi
-					done
+					cur_sha="$sha"
+					OLD_IFS="$IFS"
+					IFS=$'\n' output=($(awk -v FS='' '{
+						# constants
+						FALSE = 0
+						TRUE  = 1
+						STATE_AUTHOR  = 1
+						STATE_DATE    = 2
+						STATE_SUBJECT = 3
+
+						# intermediate/output state
+						author = ""
+						date = ""
+						subject = ""
+						in_parens = FALSE
+						in_email_angles = FALSE
+						state = STATE_AUTHOR
+
+						# [author [<email>]] [@ <author_date>    ] [><subject>]
+						# |  STATE_AUTHOR  | | STATE_DATE | STATE_SUBJECT
+
+						for (i = 1; i <= NF; i++) {
+							# process state transitions
+							if ($i == "@" && in_email_angles == FALSE && state < STATE_DATE) {
+								state = STATE_DATE
+							} else if ($i == ">" && in_email_angles == FALSE && state < STATE_SUBJECT) {
+								state = STATE_SUBJECT
+							} else if (state == STATE_AUTHOR) {
+								if ($i == "<") {
+									in_email_angles = TRUE
+								} else if ($i == ">") {
+									in_email_angles = FALSE
+								}
+								author = author $i
+							} else if (state == STATE_DATE) {
+								date = date $i
+							} else if (state == STATE_SUBJECT) {
+								subject = subject $i
+							}
+						}
+
+						# avoid field collapsing in bash, by printing a blank
+						# which is not present in $IFS
+						if (length(author) == 0)  { author  = " "; }
+						if (length(date) == 0)    { date    = " "; }
+						if (length(subject) == 0) { subject = " "; }
+
+						print author
+						print date
+						print subject
+					}' < <(trim "$rest")))
+					IFS="$OLD_IFS"
+
+					_author="$(trim "${output[0]}")"
+					_date="$(trim "${output[1]}")"
+					_subject="$(trim "${output[2]}")"
+
+					scanning_body=$GIT_FIDDLE_BODY
 					continue
 				fi
 			fi
 		fi
 
-		if $scanning; then
-			mod_message="$mod_message\n$line"
+		if $scanning_body; then
+			_message="$_message\n$line"
+		else
+			echo "$line" # not our issue! let git-rebase fail
 		fi
 	done < <(git stripspace --strip-comments < "$1")
 
 	# flush the current scan
-	if $scanning; then
-		emit "${mod_author[*]}" "${mod_date[*]}" "$mod_message"
+	if $scanning_body; then
+		emit "$cur_sha" "$_author" "$_date" "$_subject" "$_message"
 	fi
 }
 

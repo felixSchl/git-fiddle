@@ -13,7 +13,7 @@ function init_repo () {
 	init_repo &> /dev/null
 
 	touch A && git add -A && git commit -m "$(cat <<-'EOF'
-		Commit A
+		Commit  A
 
 		This is the first commit.
 		In a series of commits
@@ -22,7 +22,7 @@ function init_repo () {
 
 	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
 		#!/bin/sh
-		sed -i.bak -e 's/Commit A/Commit B/g' "$1"
+		sed -i.bak -e 's/Commit  A/Commit    B/g' "$1"
 	EOF
 	)" run git_fiddle HEAD~
 	[ $status -eq 0 ]
@@ -30,7 +30,7 @@ function init_repo () {
 	run git show -s HEAD $'--format=%s\n\n%b'
 	[ $status -eq 0 ]
 	[[ $output == "$(cat <<-'EOF'
-		Commit B
+		Commit    B
 
 		This is the first commit.
 		In a series of commits
@@ -135,10 +135,10 @@ function init_repo () {
 	)" ]]
 }
 
-@test 'fiddle: git config fiddle.messages' {
+@test 'fiddle: git config fiddle.subject (off)' {
 	init_repo &> /dev/null
 
-    git config fiddle.messages false
+	git config fiddle.subject false
 
 	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
 
@@ -154,6 +154,25 @@ function init_repo () {
 	[[ $output == 'Commit A' ]]
 }
 
+@test 'fiddle: --no-fiddle-subject' {
+	init_repo &> /dev/null
+
+	git config fiddle.subject true
+
+	touch A && git add -A && git commit -m 'Commit A' &> /dev/null
+
+	GIT_SEQUENCE_EDITOR="$(mk_script <<-EOF
+		#!/bin/sh
+		sed -i.bak -e 's/Commit A/Commit B/g' "\$1"
+	EOF
+	)" run git_fiddle --no-fiddle-subject HEAD~
+	[ $status -eq 0 ]
+
+	run git show -s HEAD --format='%s'
+	[ $status -eq 0 ]
+	[[ $output == 'Commit A' ]]
+}
+
 
 @test 'fiddle: change commit author' {
 	init_repo &> /dev/null
@@ -162,7 +181,7 @@ function init_repo () {
 
 	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
 		#!/bin/sh
-		sed -i.bak -e 's/by: .*/by: Quz Baz <quz@baz.com>/g' "$1"
+		sed -i.bak -e 's/Foo Bar <foo@bar.com>/Quz Baz <quz@baz.com>/g' "$1"
 	EOF
 	)" run git_fiddle HEAD~
 	[ $status -eq 0 ]
@@ -179,7 +198,7 @@ function init_repo () {
 
 	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
 		#!/bin/sh
-		sed -i.bak -e "s/by: .*/by: ' Quz \"Baz \\"\\\\"\" <quz@baz.com>/g" "$1"
+		sed -i.bak -e "s/Foo Bar <foo@bar.com>/' Quz \"Baz \\"\\\\"\" <quz@baz.com>/g" "$1"
 	EOF
 	)" run git_fiddle HEAD~
 	[ $status -eq 0 ]
