@@ -1,5 +1,7 @@
 .DEFAULT: test docs
 
+SHELL=/bin/bash
+
 test:
 	bats -p tests
 
