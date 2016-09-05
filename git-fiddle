@@ -21,12 +21,19 @@ ORIGINAL_GIT_SEQUENCE_EDITOR="$GIT_SEQUENCE_EDITOR"
 
 # print the help text
 # note: the help text is derived from this file
-function help () {
+function derive_help () {
 	awk '
 	f && !NF { exit }
 	/^#/ && NR>2 { f=1; sub("^# ?", "", $0); print $0 }
-	' < "${BASH_SOURCE[0]}"
+	' < "$1"
 }
+
+function help () {
+	derive_help "${BASH_SOURCE[0]}"
+}
+
+# stop here, if 'source'd
+if [ "$0" = "${BASH_SOURCE[0]}" ]; then
 
 # only capture '-h|--help' if it's first arg. let git-rebase handle it
 # otherwise.
@@ -94,3 +101,5 @@ GIT_SEQUENCE_EDITOR="${SCRIPT_DIR}/_fiddle_seq_editor" \
 	GIT_FIDDLE_BODY="$git_fiddle_body" \
 	GIT_FIDDLE_SEQUENCE_EDITOR="$ORIGINAL_GIT_SEQUENCE_EDITOR" \
 	git rebase -i "${git_rebase_args[@]}"
+
+fi
