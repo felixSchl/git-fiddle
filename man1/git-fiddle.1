@@ -5,13 +5,45 @@
 git\-fiddle \- Edit commit messages, authors and timestamps during git\-rebase
 .SH SYNOPSIS
 .B fiddle
-[\fB\-\-[no\-]\-fiddle\-messages\fR] [\fBargs...\fR]
+[\fBoptions\fR] [\fBargs...\fR]
 .SH OPTIONS
+
 .TP
-.BR \-\-[no-]fiddle-messages
-Do not edit commit messages. Useful for quick edits to author or date.
+.BR \-\-[no\-]fiddle
+Turn ON/OFF fiddeling. Useful to turn off all options and selectively
+
+.TP
+.BR \-\-[no\-]fiddle\-author
+Do (not) edit author names. Note that the author *can* still be edited,
 .br
-This value can also be set using `git config fiddle.messages`.
+but it is not pre-populated. [git config: \fIfiddle.author\fR]
+
+.TP
+.BR \-\-[no\-]fiddle\-author\-email
+Do not pre-populate the author's email. Refer to --[no-]fiddle-author.
+.br
+[git config: \fIfiddle.author.email\fR]
+
+.TP
+.BR \-\-[no\-]fiddle\-author\-date
+Do (not) edit author dates. Note that the author date *can* still be
+.br
+edited, but it is not pre-populated. [git config: \fIfiddle.author.date\fR]
+
+.TP
+.BR \-\-[no\-]fiddle\-author\-subject
+Do (not) commit subject lines. Note that the commit message *can* still
+.br
+be edited, but it is not pre-populated. [git config: \fIfiddle.subject\fR]
+
+.TP
+.BR \-\-[no\-]fiddle\-author\-body
+Do (not) the commit body. Note that the commit message *CANNOT* be edit
+.br
+if this option is turned OFF and might case `git-rebase` errors.
+.br
+[git config: \fIfiddle.body\fR]
+
 .TP
 .BR [args...]
 These arguments are passed verbatim to git-rebase.

@@ -8,13 +8,29 @@
 # using an 'exec' script during the git-rebase sequence.
 #
 # Usage:
-#   $SCRIPT [--[no-]fiddle-messages] [args...]
+#   git fiddle [--[no-]fiddle-messages] [args...]
 #
 # Options:
-#   --[no-]fiddle-messages Do not edit commit messages. Useful for quick edits
-#                          to author or date. This value can also be set using
-#                          `git config fiddle.messages`.
-#   [args...]              These arguments are passed verbatim to git-rebase.
+#   --[no-]fiddle
+#       Turn ON/OFF fiddeling. Useful to turn off all options and selectively
+#       enable some.
+#   --[no-]fiddle-author
+#       Do (not) edit author names. Note that the author *can* still be edited,
+#       but it is not pre-populated. [git config: fiddle.author]
+#   --[no-]fiddle-author-email
+#       Do not pre-populate the author's email. Refer to --[no-]fiddle-author.
+#       [git config: fiddle.author.email]
+#   --[no-]fiddle-author-date
+#       Do (not) edit author dates. Note that the author date *can* still be
+#       edited, but it is not pre-populated. [git config: fiddle.author.date]
+#   --[no-]fiddle-author-subject
+#       Do (not) commit subject lines. Note that the commit message *can* still
+#       be edited, but it is not pre-populated. [git config: fiddle.subject]
+#   --[no-]fiddle-author-body
+#       Do (not) the commit body. Note that the commit message *CANNOT* be edit
+#       if this option is turned OFF and might case `git-rebase` errors.
+#       [git config: fiddle.body]
+#   [args...] These arguments are passed verbatim to git-rebase.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORIGINAL_GIT_SEQUENCE_EDITOR="$GIT_SEQUENCE_EDITOR"
@@ -59,8 +75,8 @@ function check_config() {
 	fi
 }
 
-check_config git_fiddle_author_date  author.date
 check_config git_fiddle_author       author
+check_config git_fiddle_author_date  author.date
 check_config git_fiddle_author_email author.email
 check_config git_fiddle_subject      subject
 check_config git_fiddle_body         body
