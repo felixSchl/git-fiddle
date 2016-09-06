@@ -70,7 +70,7 @@ function prepare () {
 		if [ -z "$line" ] || [[ $line =~ ^[[:space:]]?# ]]; then
 			printf "%s\n" "$line"
 		else
-			read -r action sha rest < <(echo "$line")
+			read -r action sha rest <<< "$line"
 			printf "%s %s %s\n" "$action" "$sha" \
 				"$(git --no-pager show -s "$sha" "$GIT_PRETTY_FORMAT" | \
 					git stripspace)"
@@ -140,7 +140,7 @@ function apply () {
 	local _author _date _subject _message
 
 	while read -r line; do
-		read -r action sha rest < <(echo "$line")
+		read -r action sha rest <<< "$line"
 		if echo "$action" \
 			| grep -E -q '^(pick|p|drop|d|reword|r|edit|e|squash|s|fixup|f)$'
 		then
@@ -214,7 +214,7 @@ function apply () {
 						print author
 						print date
 						print subject
-					}' < <(trim "$rest")))
+					}' <<< "$(trim "$rest")"))
 					IFS="$OLD_IFS"
 
 					_author="$(trim "${output[0]}")"
@@ -232,7 +232,7 @@ function apply () {
 		else
 			echo "$line" # not our issue! let git-rebase fail
 		fi
-	done < <(git stripspace --strip-comments < "$1")
+	done <<< "$(git stripspace --strip-comments < "$1")"
 
 	# flush the current scan
 	if $scanning_body; then
