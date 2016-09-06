@@ -105,7 +105,11 @@ function emit () {
 		if [ -z "$subject" ]; then
 			message="$(git --no-pager show -s "$sha" --format=$'%s\n%b')"
 		else
-			message="$subject\n$(git --no-pager show -s "$sha" --format=$'%b')"
+			if [ "$GIT_FIDDLE_BODY" = false ]; then
+				message="$subject\n$(git --no-pager show -s "$sha" --format=$'%b')"
+			else
+				message="$subject"
+			fi
 		fi
 	else
 		if [ ! -z "$subject" ]; then
