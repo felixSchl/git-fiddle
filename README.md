@@ -5,6 +5,11 @@ information straight from the `git-rebase` editor, such as the author date,
 author name and commit message. This makes it trivial to edit a whole range
 of commits, shift them through time or alter ownership.
 
+## Installation
+
+Simply ensure `git-fiddle` is in your `$PATH`. The `git fiddle` alias will
+become available automatically.
+
 ## Usage
 
 Usage is almost identical to that of `git-rebase`.
