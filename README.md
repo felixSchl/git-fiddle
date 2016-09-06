@@ -19,7 +19,7 @@ as the commit message. Changes to any of these will then be applied
 using an 'exec' script during the git-rebase sequence.
 
 Usage:
-  git fiddle [--[no-]fiddle-messages] [args...]
+  git fiddle [options] [args...]
 
 Options:
   --[no-]fiddle
