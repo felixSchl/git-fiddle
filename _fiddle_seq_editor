@@ -18,8 +18,15 @@ trap '{
 
 FIDDLE_MESSAGE="$(cat <<-'EOF'
 	#
-	# WARNING: any changes to the author, date and message are only retained
-	#          for 'picked' commits.
+	# GIT-FIDDLE(1) HELP:
+	# -------------------
+	#
+	# The format employed by git-fiddle is:
+	#
+	# <action> <sha> [<author>] [@ <timestamp>] [> <subject>]
+	# [<body>]
+	#
+	# where '<action>' needs to be 'pick' for anything to happen.
 EOF
 )"
 
