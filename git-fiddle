@@ -35,18 +35,16 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORIGINAL_GIT_SEQUENCE_EDITOR="$GIT_SEQUENCE_EDITOR"
 
-# print the help text
-# note: the help text is derived from this file
-function derive_help () {
+# derive the help text from the first comment in a shell script
+function derive_help {
 	awk '
 	f && !NF { exit }
 	/^#/ && NR>2 { f=1; sub("^# ?", "", $0); print $0 }
 	' < "$1"
 }
 
-function help () {
-	derive_help "${BASH_SOURCE[0]}"
-}
+# print the help text, derived from this file
+function help { derive_help "${BASH_SOURCE[0]}"; }
 
 # stop here, if 'source'd
 if [ "$0" = "${BASH_SOURCE[0]}" ]; then
@@ -57,14 +55,15 @@ case "${1---help}" in
 	-h|--help) help; exit 0;;
 esac
 
-# strip args to `git-fiddle' from argv, so git-rebase won't reject them.
 git_fiddle_author_date=
 git_fiddle_author=
 git_fiddle_author_email=
 git_fiddle_subject=
 git_fiddle_body=
 
-function check_config() {
+# check for a given key in `git-config`.
+# assigns the result to the given var name "$1"
+function check_config {
 	local -r var="$1"
 	local -r key="$2"
 	if eval "[ -z \"\$$var\" ]"; then
@@ -81,6 +80,7 @@ check_config git_fiddle_author_email author.email
 check_config git_fiddle_subject      subject
 check_config git_fiddle_body         body
 
+# strip args to `git-fiddle' from argv, so git-rebase won't reject them.
 declare -a git_rebase_args
 while [ $# -gt 0 ]; do
 	case "$1" in

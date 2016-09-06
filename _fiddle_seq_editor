@@ -30,14 +30,14 @@ FIDDLE_MESSAGE="$(cat <<-'EOF'
 EOF
 )"
 
-function trim () {
+function trim {
 	echo "$1" | sed -e '
 		s/^[[:space:]]*//
 		s/[[:space:]]*$//
 	'
 }
 
-function create_git_pretty_format () {
+function create_git_pretty_format {
 	local format=
 
 	# --[no-]fiddle-author
@@ -70,23 +70,22 @@ function create_git_pretty_format () {
 	echo "$format"
 }
 
-GIT_PRETTY_FORMAT="--format=$(create_git_pretty_format)"
-
-function prepare () {
+function prepare {
+	local -r git_pretty_format="--format=$(create_git_pretty_format)"
 	while read -r line; do
 		if [ -z "$line" ] || [[ $line =~ ^[[:space:]]?# ]]; then
 			printf "%s\n" "$line"
 		else
 			read -r action sha rest <<< "$line"
 			printf "%s %s %s\n" "$action" "$sha" \
-				"$(git --no-pager show -s "$sha" "$GIT_PRETTY_FORMAT" | \
+				"$(git --no-pager show -s "$sha" "$git_pretty_format" | \
 					git stripspace)"
 		fi
 	done < "$1" > "$2"
 	echo "$FIDDLE_MESSAGE" >> "$2"
 }
 
-function fiddle_sequence_editor () {
+function fiddle_sequence_editor {
 	if [ -z "$GIT_FIDDLE_SEQUENCE_EDITOR" ]; then
 		GIT_FIDDLE_SEQUENCE_EDITOR="$(git config sequence.editor)"
 		if [ -z "$GIT_FIDDLE_SEQUENCE_EDITOR" ]; then
@@ -96,11 +95,9 @@ function fiddle_sequence_editor () {
 	eval "$GIT_FIDDLE_SEQUENCE_EDITOR" '"$@"'
 }
 
-function esc () {
-	echo "$1" | sed -e "s/'/'\"'\"'/g"
-}
+function esc { echo "$1" | sed -e "s/'/'\"'\"'/g"; }
 
-function emit () {
+function emit {
 	local -r sha="$1"
 	local -r author="$2"
 	local -r date="$3"
@@ -138,7 +135,7 @@ function emit () {
 	)\""
 }
 
-function apply () {
+function apply {
 	set -eo pipefail
 
 	local m=1
