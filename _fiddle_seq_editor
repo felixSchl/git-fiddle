@@ -131,6 +131,7 @@ function emit {
 	echo "exec bash -c \"$(echo "$c" | sed \
 		-e 's/\\/\\\\/g' \
 		-e 's/"/\\"/g' \
+		-e 's/`/\\`/g' \
 		-e ':a;N;$!ba;s/\n/\\n/g'
 	)\""
 }
