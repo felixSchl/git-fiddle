@@ -1,0 +1,12 @@
+environment:
+  matrix:
+    - MSYSTEM: MINGW64
+      PATH: C:\msys64\usr\bin;C:\msys64\mingw64\bin;C:\Windows\System32;C:\Windows;%PATH%
+    - MSYSTEM: MINGW32
+      PATH: C:\msys64\usr\bin;C:\msys64\mingw32\bin;C:\Windows\System32;C:\Windows;%PATH%
+
+install:
+  - bash -c 'curl -L https://github.com/sstephenson/bats/archive/v0.4.0.tar.gz | tar -xvz'
+
+build_script:
+  - bash -c 'PATH="./bats-0.4.0/bin:./bats-0.4.0/libexec:$PATH" bats tests/fiddle.bats'
