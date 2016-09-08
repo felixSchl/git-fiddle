@@ -109,7 +109,7 @@ done
 # invoke `git-rebase' using a custom editor, effectively wrapping the user's
 # actual editor choice, which will be invoked from the `git-fiddle` editor
 # itself.
-GIT_SEQUENCE_EDITOR="${SCRIPT_DIR}/_fiddle_seq_editor" \
+GIT_SEQUENCE_EDITOR="'${SCRIPT_DIR}/_fiddle_seq_editor'" \
 	GIT_FIDDLE_AUTHOR_DATE="$git_fiddle_author_date" \
 	GIT_FIDDLE_AUTHOR="$git_fiddle_author" \
 	GIT_FIDDLE_AUTHOR_EMAIL="$git_fiddle_author_email" \
