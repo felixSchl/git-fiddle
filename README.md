@@ -1,4 +1,4 @@
-# git-fiddle (1) [![Build Status](https://travis-ci.org/felixSchl/git-fiddle.svg?branch=master)](https://travis-ci.org/felixSchl/git-fiddle)
+# git-fiddle (1) [![OSX/Linux Build Status](https://travis-ci.org/felixSchl/git-fiddle.svg?branch=master)](https://travis-ci.org/felixSchl/git-fiddle) [![Windows Build status](https://ci.appveyor.com/api/projects/status/vncu5ft2xji5sq78/branch/master?svg=true)](https://ci.appveyor.com/project/felixSchl/git-fiddle/branch/master)
 
 `git-fiddle` is a wrapper around `git-rebase(1)` that allows editing of commit
 information straight from the `git-rebase` editor, such as the author date,
