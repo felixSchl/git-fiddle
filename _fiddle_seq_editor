@@ -126,7 +126,7 @@ function emit {
 	c="$c git commit --amend --no-edit"
 	[ ! -z "$date" ] && c="$c --date='$(esc "$date")'"
 	[ ! -z "$author" ] && c="$c --author='$(esc "$author")'"
-	c="$c --message=$'$(esc "$message")'"
+	c="$c --message=\$'$(esc "$message")'"
 
 	echo "exec bash -c \"$(echo "$c" | sed \
 		-e 's/\\/\\\\/g' \
