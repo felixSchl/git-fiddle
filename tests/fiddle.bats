@@ -13,7 +13,7 @@ function init_repo () {
 	init_repo &> /dev/null
 
 	touch A && git add -A && git commit -m "$(cat <<-'EOF'
-		Commit  A
+		Commit  'A'
 
 		This is the first commit.
 		In a series of commits
@@ -22,7 +22,7 @@ function init_repo () {
 
 	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
 		#!/bin/sh
-		sed -i.bak -e 's/Commit  A/Commit    \`B/g' "$1"
+		sed -i.bak -e "s/Commit  'A'/Commit    \`'B'/g" "$1"
 	EOF
 	)" run git_fiddle HEAD~
 	[ $status -eq 0 ]
@@ -31,11 +31,11 @@ function init_repo () {
 	[ $status -eq 0 ]
 
 	expected="$(
-		echo 'Commit    `B';
+		echo "Commit    \`'B'";
 		cat <<-'EOF'
 
-			This is the first commit.
-			In a series of commits
+		This is the first commit.
+		In a series of commits
 		EOF
     )"
 

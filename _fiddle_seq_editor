@@ -98,7 +98,7 @@ function fiddle_sequence_editor {
 	eval "$GIT_FIDDLE_SEQUENCE_EDITOR" '"$@"'
 }
 
-function esc { echo "$1" | sed -e "s/'/'\"'\"'/g"; }
+function esc { echo "$1" | sed -e "s/'/'\"'\"$'/g"; }
 
 function emit {
 	local -r action="$1"
