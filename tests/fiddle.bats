@@ -42,6 +42,39 @@ function init_repo () {
 	[[ $output == "$expected" ]]
 }
 
+@test 'fiddle: no-opt if action isnt "fiddle"' {
+	init_repo &> /dev/null
+
+	touch A && git add -A && git commit -m "$(cat <<-'EOF'
+		Commit  A
+
+		This is the first commit.
+		In a series of commits
+	EOF
+	)" &> /dev/null
+
+	GIT_SEQUENCE_EDITOR="$(mk_script <<-'EOF'
+		#!/bin/sh
+		sed -i.bak -e 's/^fiddle /pick /g' "$1"
+	EOF
+	)" run git_fiddle HEAD~
+	[ $status -eq 0 ]
+
+	run git show -s HEAD $'--format=%s\n\n%b'
+	[ $status -eq 0 ]
+
+	expected="$(
+		cat <<-'EOF'
+		Commit  A
+
+		This is the first commit.
+		In a series of commits
+		EOF
+    )"
+
+	[[ $output == "$expected" ]]
+}
+
 @test 'fiddle: parse commit messages that looks similar to action' {
 	init_repo &> /dev/null
 
