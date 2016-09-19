@@ -111,9 +111,7 @@ function emit {
 	if [[ "$action" == fiddle ]]; then
 		echo "pick $sha"
 		if [ -z "$message" ]; then
-			if [ -z "$subject" ]; then
-				message="$(git --no-pager show -s "$sha" --format=$'%s\n%b')"
-			else
+			if [ -n "$subject" ]; then
 				if [ "$GIT_FIDDLE_BODY" = false ]; then
 					message="$subject\n$(git --no-pager show -s "$sha" --format=$'%b')"
 				else
@@ -127,11 +125,11 @@ function emit {
 		fi
 
 		local c=
-		[ ! -z "$date" ] && c="GIT_AUTHOR_DATE='$date'"
+		[ -n "$date" ] && c="GIT_AUTHOR_DATE='$date'"
 		c="$c git commit --amend --no-edit"
-		[ ! -z "$date" ] && c="$c --date='$(esc "$date")'"
-		[ ! -z "$author" ] && c="$c --author='$(esc "$author")'"
-		c="$c --message=\$'$(esc "$message")'"
+		[ -n "$date"    ] && c="$c --date='$(esc "$date")'"
+		[ -n "$author"  ] && c="$c --author='$(esc "$author")'"
+		[ -n "$message" ] && c="$c --message=\$'$(esc "$message")'"
 
 		echo "exec bash -c \"$(echo "$c" | sed \
 			-e 's/\\/\\\\/g' \
