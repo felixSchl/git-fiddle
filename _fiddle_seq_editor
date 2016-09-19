@@ -26,7 +26,7 @@ FIDDLE_MESSAGE="$(cat <<-'EOF'
 	# <action> <sha> [<author>] [@ <timestamp>] [> <subject>]
 	# [<body>]
 	#
-	# where '<action>' needs to be 'pick' for anything to happen.
+	# where '<action>' needs to be 'fiddle' for anything to happen.
 EOF
 )"
 
@@ -77,6 +77,9 @@ function prepare {
 			printf "%s\n" "$line"
 		else
 			read -r action sha rest <<< "$line"
+			if [[ "$action" == pick ]]; then
+				action=fiddle
+			fi
 			printf "%s %s %s\n" "$action" "$sha" \
 				"$(git --no-pager show -s "$sha" "$git_pretty_format" | \
 					git stripspace)"
@@ -98,66 +101,68 @@ function fiddle_sequence_editor {
 function esc { echo "$1" | sed -e "s/'/'\"'\"'/g"; }
 
 function emit {
-	local -r sha="$1"
-	local -r author="$2"
-	local -r date="$3"
+	local -r action="$1"
+	local -r sha="$2"
+	local -r author="$3"
+	local -r date="$4"
+	local subject="$5"
+	local message="$6"
 
-	local subject="$4"
-	local message="$5"
-
-	if [ -z "$message" ]; then
-		if [ -z "$subject" ]; then
-			message="$(git --no-pager show -s "$sha" --format=$'%s\n%b')"
-		else
-			if [ "$GIT_FIDDLE_BODY" = false ]; then
-				message="$subject\n$(git --no-pager show -s "$sha" --format=$'%b')"
+	if [[ "$action" == fiddle ]]; then
+		echo "pick $sha"
+		if [ -z "$message" ]; then
+			if [ -z "$subject" ]; then
+				message="$(git --no-pager show -s "$sha" --format=$'%s\n%b')"
 			else
-				message="$subject"
+				if [ "$GIT_FIDDLE_BODY" = false ]; then
+					message="$subject\n$(git --no-pager show -s "$sha" --format=$'%b')"
+				else
+					message="$subject"
+				fi
+			fi
+		else
+			if [ ! -z "$subject" ]; then
+				message="$subject\n$message"
 			fi
 		fi
+
+		local c=
+		[ ! -z "$date" ] && c="GIT_AUTHOR_DATE='$date'"
+		c="$c git commit --amend --no-edit"
+		[ ! -z "$date" ] && c="$c --date='$(esc "$date")'"
+		[ ! -z "$author" ] && c="$c --author='$(esc "$author")'"
+		c="$c --message=\$'$(esc "$message")'"
+
+		echo "exec bash -c \"$(echo "$c" | sed \
+			-e 's/\\/\\\\/g' \
+			-e 's/"/\\"/g' \
+			-e 's/`/\\`/g' \
+			-e ':a;N;$!ba;s/\n/\\n/g'
+		)\""
 	else
-		if [ ! -z "$subject" ]; then
-			message="$subject\n$message"
-		fi
+		echo "$action $sha"
 	fi
-
-	local c=
-	[ ! -z "$date" ] && c="GIT_AUTHOR_DATE='$date'"
-	c="$c git commit --amend --no-edit"
-	[ ! -z "$date" ] && c="$c --date='$(esc "$date")'"
-	[ ! -z "$author" ] && c="$c --author='$(esc "$author")'"
-	c="$c --message=\$'$(esc "$message")'"
-
-	echo "exec bash -c \"$(echo "$c" | sed \
-		-e 's/\\/\\\\/g' \
-		-e 's/"/\\"/g' \
-		-e 's/`/\\`/g' \
-		-e ':a;N;$!ba;s/\n/\\n/g'
-	)\""
 }
 
 function apply {
 	set -eo pipefail
 
-	local m=1
 	local cur_sha=
+	local cur_action=
 	local scanning_body=false
 	local _author _date _subject _message
 
 	while read -r line; do
 		read -r action sha rest <<< "$line"
 		if echo "$action" \
-			| grep -E -q '^(pick|p|drop|d|reword|r|edit|e|squash|s|fixup|f)$'
+			| grep -E -q '^(fiddle|pick|p|drop|d|reword|r|edit|e|squash|s|fixup|f)$'
 		then
 			if [[ "$sha" =~ ^[0-9a-z]{6,}$ ]]; then
 
 				# flush the current scan
 				if $scanning_body; then
-					emit "$cur_sha" "$_author" "$_date" "$_subject" "$_message"
+					emit "$cur_action" "$cur_sha" "$_author" "$_date" "$_subject" "$_message"
 				fi
-
-				# retain the action
-				echo "$action $sha"
 
 				# reset state
 				scanning_body=false
@@ -167,68 +172,67 @@ function apply {
 				_message=
 				declare -a output
 
-				# begin a fresh scan for 'pick' actions
-				if [[ "$action" == pick ]]; then
-					cur_sha="$sha"
-					OLD_IFS="$IFS"
-					IFS=$'\n' output=($(awk -v FS='' '{
-						# constants
-						FALSE = 0
-						TRUE  = 1
-						STATE_AUTHOR  = 1
-						STATE_DATE    = 2
-						STATE_SUBJECT = 3
+				# begin a fresh scan for 'fiddle' actions
+				cur_sha="$sha"
+				cur_action="$action"
+				OLD_IFS="$IFS"
+				IFS=$'\n' output=($(awk -v FS='' '{
+					# constants
+					FALSE = 0
+					TRUE  = 1
+					STATE_AUTHOR  = 1
+					STATE_DATE    = 2
+					STATE_SUBJECT = 3
 
-						# intermediate/output state
-						author = ""
-						date = ""
-						subject = ""
-						in_parens = FALSE
-						in_email_angles = FALSE
-						state = STATE_AUTHOR
+					# intermediate/output state
+					author = ""
+					date = ""
+					subject = ""
+					in_parens = FALSE
+					in_email_angles = FALSE
+					state = STATE_AUTHOR
 
-						# [author [<email>]] [@ <author_date>    ] [><subject>]
-						# |  STATE_AUTHOR  | | STATE_DATE | STATE_SUBJECT
+					# [author [<email>]] [@ <author_date>    ] [><subject>]
+					# |  STATE_AUTHOR  | | STATE_DATE | STATE_SUBJECT
 
-						for (i = 1; i <= NF; i++) {
-							# process state transitions
-							if ($i == "@" && in_email_angles == FALSE && state < STATE_DATE) {
-								state = STATE_DATE
-							} else if ($i == ">" && in_email_angles == FALSE && state < STATE_SUBJECT) {
-								state = STATE_SUBJECT
-							} else if (state == STATE_AUTHOR) {
-								if ($i == "<") {
-									in_email_angles = TRUE
-								} else if ($i == ">") {
-									in_email_angles = FALSE
-								}
-								author = author $i
-							} else if (state == STATE_DATE) {
-								date = date $i
-							} else if (state == STATE_SUBJECT) {
-								subject = subject $i
+					for (i = 1; i <= NF; i++) {
+						# process state transitions
+						if ($i == "@" && in_email_angles == FALSE && state < STATE_DATE) {
+							state = STATE_DATE
+						} else if ($i == ">" && in_email_angles == FALSE && state < STATE_SUBJECT) {
+							state = STATE_SUBJECT
+						} else if (state == STATE_AUTHOR) {
+							if ($i == "<") {
+								in_email_angles = TRUE
+							} else if ($i == ">") {
+								in_email_angles = FALSE
 							}
+							author = author $i
+						} else if (state == STATE_DATE) {
+							date = date $i
+						} else if (state == STATE_SUBJECT) {
+							subject = subject $i
 						}
+					}
 
-						# avoid field collapsing in bash, by printing a blank
-						# which is not present in $IFS
-						if (length(author) == 0)  { author  = " "; }
-						if (length(date) == 0)    { date    = " "; }
-						if (length(subject) == 0) { subject = " "; }
+					# avoid field collapsing in bash, by printing a blank
+					# which is not present in $IFS
+					if (length(author) == 0)  { author  = " "; }
+					if (length(date) == 0)    { date    = " "; }
+					if (length(subject) == 0) { subject = " "; }
 
-						print author
-						print date
-						print subject
-					}' <<< "$(trim "$rest")"))
-					IFS="$OLD_IFS"
+					print author
+					print date
+					print subject
+				}' <<< "$(trim "$rest")"))
+				IFS="$OLD_IFS"
 
-					_author="$(trim "${output[0]}")"
-					_date="$(trim "${output[1]}")"
-					_subject="$(trim "${output[2]}")"
+				_author="$(trim "${output[0]}")"
+				_date="$(trim "${output[1]}")"
+				_subject="$(trim "${output[2]}")"
 
-					scanning_body=$GIT_FIDDLE_BODY
-					continue
-				fi
+				scanning_body=true
+				continue
 			fi
 		fi
 
@@ -241,7 +245,7 @@ function apply {
 
 	# flush the current scan
 	if $scanning_body; then
-		emit "$cur_sha" "$_author" "$_date" "$_subject" "$_message"
+		emit  "$cur_action" "$cur_sha" "$_author" "$_date" "$_subject" "$_message"
 	fi
 }
 
