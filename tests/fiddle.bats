@@ -187,6 +187,7 @@ function init_repo () {
 	[ $status -eq 0 ]
 
 	run git show -s HEAD --format='%s'
+
 	[ $status -eq 0 ]
 	[[ $output == 'Commit A' ]]
 }

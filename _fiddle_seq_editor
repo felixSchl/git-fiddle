@@ -15,7 +15,6 @@ GIT_FIDDLE_WORK=${1}.fiddle.work
 trap '{
 	exit_code=$?
 	rm -f "$GIT_FIDDLE_TODO" || :
-	rm -rf "$GIT_FIDDLE_WORK" || :
 	exit $exit_code
 }' EXIT
 
@@ -116,29 +115,51 @@ function emit {
 	local -r date="$4"
 	local subject="$5"
 	local message="$6"
+	local has_message=false
+	local -r message_file=${GIT_FIDDLE_WORK}/${sha}.message
 
 	if [[ "$action" == fiddle ]]; then
 		echo "pick $sha"
+
 		if [ -z "$message" ]; then
-			if [ -n "$subject" ] && [ "$GIT_FIDDLE_SUBJECT" != false ]; then
+			if [ -n "$subject" ] && ! [ "$GIT_FIDDLE_SUBJECT" = false ]; then
 				if [ "$GIT_FIDDLE_BODY" = false ]; then
-					message="$subject\n$(git --no-pager show -s "$sha" --format=$'%b')"
+					has_message=true
+					echo "$subject"
+					echo
+					git --no-pager show -s "$sha" --format=$'%b'
 				else
-					message="$subject"
+					has_message=true
+					echo "$subject"
 				fi
 			fi
 		else
-			if [ -n "$subject" ]; then
-				message="$subject\n$message"
+			if [ -n "$subject" ] && ! [ "$GIT_FIDDLE_SUBJECT" = false ]; then
+				has_message=true
+				echo "$subject"
+				echo
+				printf "$message"
 			fi
-		fi
+		fi > "$message_file"
 
 		local c=
-		[ -n "$date" ] && c="GIT_AUTHOR_DATE='$date'"
+		if [ -n "$date" ]; then
+			c="GIT_AUTHOR_DATE='$date'"
+		fi
+
 		c="$c git commit --amend --no-edit"
-		[ -n "$date"    ] && c="$c --date='$(esc "$date")'"
-		[ -n "$author"  ] && c="$c --author='$(esc "$author")'"
-		[ -n "$message" ] && c="$c --message=\$'$(esc "$message")'"
+
+		if [ -n "$date"    ]; then
+			c="$c --date='$(esc "$date")'"
+		fi
+
+		if [ -n "$author"  ]; then
+			c="$c --author='$(esc "$author")'"
+		fi
+
+		if [ "$has_message" = true ]; then
+			c="$c --file='$message_file'"
+		fi
 
 		echo "exec bash -c \"$(echo "$c" | sed \
 			-e 's/\\/\\\\/g' \
