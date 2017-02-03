@@ -54,9 +54,8 @@ function create_git_pretty_format {
 	fi
 
 	# --[no-]fiddle-subject
-	if ! [ "$GIT_FIDDLE_SUBJECT" = false ]; then
-		format="$(trim "$format> %s")"
-	fi
+	# note: always show this, only apply if 'GIT_FIDDLE_SUBJECT'
+	format="$(trim "$format> %s")"
 
 	# --[no-]fiddle-body
 	if ! [ "$GIT_FIDDLE_BODY" = false ]; then
@@ -71,6 +70,12 @@ function create_git_pretty_format {
 }
 
 function prepare {
+
+	if [ "$GIT_FIDDLE_SUBJECT" = false ]; then
+		echo '# git-fiddle: subject lines are *read-only*'
+		echo ''
+	fi > "$2"
+
 	local -r git_pretty_format="--format=$(create_git_pretty_format)"
 	while read -r line; do
 		if [ -z "$line" ] || [[ $line =~ ^[[:space:]]?# ]]; then
@@ -84,7 +89,8 @@ function prepare {
 				"$(git --no-pager show -s "$sha" "$git_pretty_format" | \
 					git stripspace)"
 		fi
-	done < "$1" > "$2"
+	done < "$1" >> "$2"
+
 	echo "$FIDDLE_MESSAGE" >> "$2"
 }
 
@@ -111,7 +117,7 @@ function emit {
 	if [[ "$action" == fiddle ]]; then
 		echo "pick $sha"
 		if [ -z "$message" ]; then
-			if [ -n "$subject" ]; then
+			if [ -n "$subject" ] && [ "$GIT_FIDDLE_SUBJECT" != false ]; then
 				if [ "$GIT_FIDDLE_BODY" = false ]; then
 					message="$subject\n$(git --no-pager show -s "$sha" --format=$'%b')"
 				else
@@ -119,7 +125,7 @@ function emit {
 				fi
 			fi
 		else
-			if [ ! -z "$subject" ]; then
+			if [ -n "$subject" ]; then
 				message="$subject\n$message"
 			fi
 		fi
