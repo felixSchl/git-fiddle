@@ -8,11 +8,14 @@
 # changes and prepare a 'git commit --amend' 'exec' step to be called after each
 # 'pick'ed commit.
 
-fiddle_todo="$1".fiddle
+GIT_TODO=$1
+GIT_FIDDLE_TODO=${1}.fiddle
+GIT_FIDDLE_WORK=${1}.fiddle.work
 
 trap '{
 	exit_code=$?
-	rm -f "$fiddle_todo" || :
+	rm -f "$GIT_FIDDLE_TODO" || :
+	rm -rf "$GIT_FIDDLE_WORK" || :
 	exit $exit_code
 }' EXIT
 
@@ -74,7 +77,7 @@ function prepare {
 	if [ "$GIT_FIDDLE_SUBJECT" = false ]; then
 		echo '# git-fiddle: subject lines are *read-only*'
 		echo ''
-	fi > "$2"
+	fi > "$GIT_FIDDLE_TODO"
 
 	local -r git_pretty_format="--format=$(create_git_pretty_format)"
 	while read -r line; do
@@ -89,9 +92,9 @@ function prepare {
 				"$(git --no-pager show -s "$sha" "$git_pretty_format" | \
 					git stripspace)"
 		fi
-	done < "$1" >> "$2"
+	done < "$GIT_TODO" >> "$GIT_FIDDLE_TODO"
 
-	echo "$FIDDLE_MESSAGE" >> "$2"
+	echo "$FIDDLE_MESSAGE" >> "$GIT_FIDDLE_TODO"
 }
 
 function fiddle_sequence_editor {
@@ -101,7 +104,7 @@ function fiddle_sequence_editor {
 			GIT_FIDDLE_SEQUENCE_EDITOR="$(git var GIT_EDITOR)" || return $?
 		fi
 	fi
-	eval "$GIT_FIDDLE_SEQUENCE_EDITOR" '"$@"'
+	eval "$GIT_FIDDLE_SEQUENCE_EDITOR" "$GIT_FIDDLE_TODO"
 }
 
 function esc { echo "$1" | sed -e "s/'/'\"'\"$'/g"; }
@@ -245,7 +248,7 @@ function apply {
 		else
 			echo "$line" # not our issue! let git-rebase fail
 		fi
-	done <<< "$(git stripspace --strip-comments < "$1")"
+	done <<< "$(git stripspace --strip-comments < "$GIT_FIDDLE_TODO")"
 
 	# flush the current scan
 	if $scanning_body; then
@@ -254,6 +257,8 @@ function apply {
 }
 
 # kick off
-prepare "$1" "$fiddle_todo" && \
-	fiddle_sequence_editor "$fiddle_todo" && \
-		apply "$fiddle_todo" > "$1" || exit $?;
+rm -rf "$GIT_FIDDLE_WORK" && \
+mkdir -p "$GIT_FIDDLE_WORK" && \
+prepare && \
+fiddle_sequence_editor && \
+apply > "$GIT_TODO" || exit $?;
