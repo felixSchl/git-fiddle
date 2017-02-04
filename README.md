@@ -39,10 +39,10 @@ Options:
   --[no-]fiddle-author-date
       Do (not) edit author dates. Note that the author date *can* still be
       edited, but it is not pre-populated. [git config: fiddle.author.date]
-  --[no-]fiddle-author-subject
+  --[no-]fiddle-subject
       Do (not) commit subject lines. Note that the commit message *can* still
       be edited, but it is not pre-populated. [git config: fiddle.subject]
-  --[no-]fiddle-author-body
+  --[no-]fiddle-body
       Do (not) the commit body. Note that the commit message *CANNOT* be edit
       if this option is turned OFF and might case `git-rebase` errors.
       [git config: fiddle.body]
